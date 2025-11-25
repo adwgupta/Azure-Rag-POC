@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Azure RAG POC - Frontend</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Main container for the demo UI -->
+
+  <div class="chat-layout">
+    <!-- Sidebar for server and ingest actions -->
+    <aside class="sidebar">
+      <div class="brand">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <rect x="3" y="3" width="8" height="8" rx="1.5" fill="#0f62fe" />
+          <rect x="13" y="3" width="8" height="8" rx="1.5" fill="#7fdbff" />
+          <rect x="3" y="13" width="8" height="8" rx="1.5" fill="#9be15d" />
+          <rect x="13" y="13" width="8" height="8" rx="1.5" fill="#f6c90e" />
+        </svg>
+        <div>
+          <h1>Azure RAG</h1>
+          <p class="muted">Chat & Document RAG Demo</p>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <h3>Server</h3>
+        <label class="preview-label">
+          <input id="previewMode" type="checkbox" />
+          <span>Preview Mode</span>
+          <small class="muted">(mocked responses)</small>
+        </label>
+        <label for="apiBase">API Base URL</label>
+        <input id="apiBase" type="text" value="http://localhost:8000" />
+        <div class="row buttons">
+          <button id="healthBtn" class="btn">Health</button>
+          <button id="createIndexBtn" class="btn primary">Create Index</button>
+        </div>
+        <pre id="serverStatus" class="output">Server status will appear here</pre>
+      </div>
+      <div class="sidebar-section">
+        <h3>Ingest Document</h3>
+        <div id="dropZone" class="drop-zone">
+          <div class="drop-inner">
+            <strong>Drag & drop a file here</strong>
+            <span class="muted">or click to browse (PDF, DOCX, TXT)</span>
+          </div>
+          <input id="fileInput" type="file" class="file-input" />
+        </div>
+        <label for="sourceName">Source name (optional)</label>
+        <input id="sourceName" type="text" placeholder="e.g. Q1_2025_Meeting" />
+        <div class="row buttons">
+          <button id="ingestBtn" class="btn primary">Upload & Ingest</button>
+        </div>
+        <pre id="ingestStatus" class="output">Upload status will appear here</pre>
+      </div>
+    </aside>
+
+    <!-- Main chat area -->
+    <main class="chat-main">
+      <div id="chatArea" class="chat-area">
+        <!-- Chat messages will be rendered here -->
+      </div>
+      <form id="chatForm" class="chat-input-row" autocomplete="off">
+        <input id="question" type="text" placeholder="Ask something about the uploaded documents..." autocomplete="off" />
+        <input id="topK" type="number" value="5" min="1" max="20" class="topk-input" title="Context chunks (Top K)" />
+        <button id="queryBtn" class="btn primary" type="submit">Ask</button>
+      </form>
+    </main>
+  </div>
+
+    
+  
+
+  <script src="app.js"></script>
+</body>
+</html>
