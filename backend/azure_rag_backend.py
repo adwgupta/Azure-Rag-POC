@@ -62,14 +62,14 @@ class AzureRAGBackend:
         # Azure OpenAI configuration
         self.openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         self.openai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        self.deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4")
+        self.deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-35-turbo")
         self.embedding_deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002")
         self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
         
         # Azure AI Search configuration
         self.search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
         self.search_api_key = os.getenv("AZURE_SEARCH_API_KEY")
-        self.index_name = os.getenv("AZURE_SEARCH_INDEX_NAME", "minutes-index")
+        self.index_name = os.getenv("AZURE_SEARCH_INDEX_NAME", "ragpocmeet")
         
         # Application settings
         self.chunk_size = int(os.getenv("CHUNK_SIZE", "1000"))

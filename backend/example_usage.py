@@ -10,7 +10,7 @@ Make sure to:
 """
 
 import logging
-from azure_rag_backend import AzureRAGBackend
+from backend.azure_rag_backend import AzureRAGBackend
 
 # Setup logging to see what's happening
 logging.basicConfig(
