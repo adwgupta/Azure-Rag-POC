@@ -3,7 +3,7 @@ Comprehensive validation script for Azure RAG backend setup.
 
 This script checks:
 1. Required environment variables are set
-2. Azure OpenAI connectivity (embedding call)
+2. Azure OpenAI connectivity (GPT + embedding call)
 3. Embedding vector dimension
 4. Azure Search index metadata
 5. Vector dimension matching between model and index
@@ -56,42 +56,55 @@ def check_env_vars():
     print("\n  All required variables found!")
     return True
 
-def check_embedding_api():
-    """Test Azure OpenAI embedding call and get vector dimension."""
-    print_section("2. Testing Azure OpenAI Embedding API")
-    
-    try:
-        from openai import AzureOpenAI
-    except ImportError:
-        print("  ERROR: openai module not installed. Run: pip install openai")
-        return None
-    
+def check_openai_apis():
+    """Test Azure OpenAI GPT and Embedding deployments."""
+    print_section("2. Testing Azure OpenAI Deployments")
+
+    from openai import AzureOpenAI
+
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     key = os.getenv("AZURE_OPENAI_API_KEY")
+    gpt_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
     emb_deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
-    
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-01-preview")
+
     print(f"  Endpoint: {endpoint}")
-    print(f"  Deployment: {emb_deployment}")
+    print(f"  GPT Deployment: {gpt_deployment}")
+    print(f"  Embedding Deployment: {emb_deployment}")
     print(f"  API Version: {api_version}")
-    
+
+    client = AzureOpenAI(
+        azure_endpoint=endpoint,
+        api_key=key,
+        api_version=api_version
+    )
+    print("  ✓ AzureOpenAI client created")
+
+    # Test GPT
+    gpt_ok = False
     try:
-        client = AzureOpenAI(
-            azure_endpoint=endpoint,
-            api_key=key,
-            api_version=api_version
+        print("  Calling chat.completions.create()...")
+        resp = client.chat.completions.create(
+            model=gpt_deployment,
+            messages=[{"role": "user", "content": "Hello from GPT test"}]
         )
-        print("  ✓ AzureOpenAI client created")
-        
+        print(f"  ✓ GPT successful! Response: {resp.choices[0].message.content}")
+        gpt_ok = True
+    except Exception as e:
+        print(f"  ✗ GPT call failed: {e}")
+
+    # Test Embeddings
+    emb_dim = None
+    try:
         print("  Calling embeddings.create()...")
         resp = client.embeddings.create(input="test", model=emb_deployment)
         vec = resp.data[0].embedding
-        vec_dim = len(vec)
-        print(f"  ✓ Embedding successful! Vector dimension: {vec_dim}")
-        return vec_dim
+        emb_dim = len(vec)
+        print(f"  ✓ Embedding successful! Vector dimension: {emb_dim}")
     except Exception as e:
         print(f"  ✗ Embedding call failed: {e}")
-        return None
+
+    return emb_dim if gpt_ok and emb_dim else None
 
 def check_search_index(expected_vec_dim):
     """Check Azure Search index metadata."""
@@ -106,7 +119,7 @@ def check_search_index(expected_vec_dim):
     
     endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
     key = os.getenv("AZURE_SEARCH_API_KEY")
-    index_name = os.getenv("AZURE_SEARCH_INDEX_NAME", "minutes-index")
+    index_name = os.getenv("AZURE_SEARCH_INDEX_NAME", "rag-file-1")
     
     print(f"  Endpoint: {endpoint}")
     print(f"  Index name: {index_name}")
@@ -120,24 +133,25 @@ def check_search_index(expected_vec_dim):
         
         print("\n  Index fields:")
         for f in index.fields:
-            vec_dim = getattr(f, 'vector_search_dimensions', None)
+            # Try both possible property names
+            vec_dim = getattr(f, 'dimensions', None) or getattr(f, 'vector_search_dimensions', None)
             if vec_dim:
-                print(f"    - {f.name}: {f.type} (vector_dimensions={vec_dim})")
+                print(f"    - {f.name}: {f.type} (dimensions={vec_dim})")
             else:
                 print(f"    - {f.name}: {f.type}")
         
-        # Check for embedding field and its dimension
-        embedding_field = next((f for f in index.fields if f.name == 'embedding'), None)
+        # Check for embedding/text_vector field and its dimension
+        embedding_field = next((f for f in index.fields if f.name in ['embedding', 'text_vector']), None)
         if not embedding_field:
-            print("\n  ⚠ WARNING: 'embedding' field not found in index")
+            print("\n  ⚠ WARNING: No vector field ('embedding' or 'text_vector') found in index")
             return False
         
-        index_vec_dim = getattr(embedding_field, 'vector_search_dimensions', None)
+        index_vec_dim = getattr(embedding_field, 'dimensions', None) or getattr(embedding_field, 'vector_search_dimensions', None)
         if not index_vec_dim:
-            print("\n  ⚠ WARNING: 'embedding' field has no vector_search_dimensions")
+            print("\n  ⚠ WARNING: Vector field has no dimensions property (check SDK version)")
             return False
         
-        print(f"\n  Index embedding vector dimension: {index_vec_dim}")
+        print(f"\n  Index vector field dimension: {index_vec_dim}")
         if expected_vec_dim and expected_vec_dim != index_vec_dim:
             print(f"  ✗ MISMATCH: Model returns {expected_vec_dim}, index expects {index_vec_dim}")
             print(f"    FIX: Update AZURE_OPENAI_EMBEDDING_DEPLOYMENT or recreate the index with correct dimensions")
@@ -154,6 +168,7 @@ def check_search_index(expected_vec_dim):
     except Exception as e:
         print(f"  ✗ Search index check failed: {e}")
         return False
+
 
 def check_backend_init():
     """Try to initialize the AzureRAGBackend."""
@@ -183,12 +198,12 @@ def main():
     
     results = {
         'env': check_env_vars(),
-        'embedding_dim': check_embedding_api(),
+        'embedding_dim': check_openai_apis(),
         'index': None,
         'backend': None
     }
     
-    if results['env']:
+    if results['env'] and results['embedding_dim']:
         results['index'] = check_search_index(results['embedding_dim'])
     
     if results['index']:
