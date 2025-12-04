@@ -1,0 +1,17 @@
+# Azure OpenAI Configuration
+AZURE_OPENAI_ENDPOINT=https://openai-shared-lab-garden-eastus2-001.openai.azure.com/
+AZURE_OPENAI_API_KEY=da4ab482436c49d7946026190c9124fd
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=Shared_Garden_001-Embedding-Model
+AZURE_OPENAI_API_VERSION=2024-10-01-preview
+
+# Azure AI Search Configuration
+AZURE_SEARCH_ENDPOINT=https://ragpocmeet.search.windows.net
+AZURE_SEARCH_API_KEY=0rbSAExm4BMs9TFX07CC6IfcZU1ehK3QCGLpSbyQkkAzSeAjTlcb
+AZURE_SEARCH_INDEX_NAME=rag-file-1
+
+# Application Settings
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=200
+MAX_TOKENS=4000
+TEMPERATURE=0.7
