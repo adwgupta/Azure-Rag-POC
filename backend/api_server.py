@@ -62,6 +62,18 @@ class QueryResponse(BaseModel):
     context: List[Dict[str, Any]]
 
 
+class ChatMessage(BaseModel):
+    """Single chat message used for conversational queries."""
+    role: str = Field(..., description="Role of the message: 'user' or 'assistant'")
+    content: str = Field(..., description="Message text")
+
+
+class ChatRequest(BaseModel):
+    """Request model for chat-based querying."""
+    messages: List[ChatMessage] = Field(..., description="Ordered chat messages")
+    top_k: int = Field(5, description="Number of context chunks to retrieve", ge=1, le=20)
+
+
 class IngestResponse(BaseModel):
     """Response model for document ingestion."""
     source: str
@@ -225,6 +237,27 @@ async def query_rag(request: QueryRequest):
         
     except Exception as e:
         logger.error(f"Error processing query: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/chat", response_model=QueryResponse)
+async def chat_rag(request: ChatRequest):
+    """Chat endpoint that keeps prior turns in context while querying RAG."""
+    try:
+        if rag_backend is None:
+            raise HTTPException(status_code=503, detail="RAG backend not initialized")
+
+        result = rag_backend.query_chat(
+            [m.model_dump() for m in request.messages],
+            top_k=request.top_k
+        )
+
+        return QueryResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing chat query: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

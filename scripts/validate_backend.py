@@ -177,7 +177,7 @@ def check_backend_init():
     try:
         # Add backend folder to path
         sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
-        from backend import AzureRAGBackend
+        from azure_rag_backend import AzureRAGBackend
     except ImportError as e:
         print(f"  ✗ Could not import AzureRAGBackend: {e}")
         return False

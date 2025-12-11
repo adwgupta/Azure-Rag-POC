@@ -28,6 +28,7 @@ from azure.search.documents.indexes.models import (
     VectorSearchProfile,
     HnswAlgorithmConfiguration,
 )
+from azure.search.documents.models import VectorizedQuery
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 
@@ -334,25 +335,29 @@ class AzureRAGBackend:
             # Generate embedding for the query
             query_embedding = self.generate_embedding(query)
             
-            # Perform vector search
+            # Perform vector search (Azure AI Search requires kind="vector")
+            vector_query = VectorizedQuery(
+                vector=query_embedding,
+                k_nearest_neighbors=top_k,
+                fields="text_vector",  # existing index field name
+                kind="vector",
+            )
+
             results = self.search_client.search(
-                search_text=None,
-                vector_queries=[{
-                    "vector": query_embedding,
-                    "k_nearest_neighbors": top_k,
-                    "fields": "embedding"
-                }],
-                select=["id", "content", "source", "chunk_id"]
+                search_text="",
+                vector_queries=[vector_query],
+                select=["chunk", "title", "parent_id", "chunk_id", "text_vector"],
+                top=top_k,
             )
             
             # Collect results
             search_results = []
             for result in results:
                 search_results.append({
-                    "id": result["id"],
-                    "content": result["content"],
-                    "source": result["source"],
-                    "chunk_id": result["chunk_id"],
+                    "id": result.get("id") or result.get("parent_id"),
+                    "content": result.get("content") or result.get("chunk"),
+                    "source": result.get("source") or result.get("title"),
+                    "chunk_id": result.get("chunk_id"),
                     "score": result.get("@search.score", 0)
                 })
             
@@ -363,52 +368,55 @@ class AzureRAGBackend:
             logger.error(f"Error performing search: {str(e)}")
             raise
     
-    def generate_answer(self, query: str, context_chunks: List[Dict[str, Any]]) -> str:
+    def generate_answer(
+        self,
+        query: str,
+        context_chunks: List[Dict[str, Any]],
+        chat_history: Optional[List[Dict[str, str]]] = None,
+    ) -> str:
         """
-        Generate an answer using Azure OpenAI with retrieved context.
-        
-        Args:
-            query: User's question
-            context_chunks: Retrieved context chunks
-            
-        Returns:
-            Generated answer
+        Generate an answer using Azure OpenAI with retrieved context and optional chat history.
         """
         try:
-            # Prepare context from chunks
             context = "\n\n".join([
                 f"[Source: {chunk['source']}, Chunk: {chunk['chunk_id']}]\n{chunk['content']}"
                 for chunk in context_chunks
             ])
-            
-            # Create prompt
+
+            # Include condensed history so the model can stay conversational.
+            history_text = "\n\n".join([
+                f"{m['role'].capitalize()}: {m['content']}" for m in (chat_history or [])
+            ])
+
             system_message = """You are an AI assistant helping to answer questions about meeting minutes and documents.
 Use the provided context to answer the user's question accurately and concisely.
 If the context doesn't contain enough information to answer the question, say so.
 Always cite the source documents when providing information."""
-            
-            user_message = f"""Context from documents:
+
+            user_message = f"""Conversation so far (if any):
+{history_text or 'None'}
+
+Context from documents:
 {context}
 
 Question: {query}
 
-Please provide a comprehensive answer based on the context above."""
-            
-            # Generate response
+Please provide a concise, source-grounded answer based on the context above."""
+
             response = self.openai_client.chat.completions.create(
                 model=self.deployment_name,
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}
                 ],
-                max_tokens=self.max_tokens,
+                max_completion_tokens=self.max_tokens,
                 temperature=self.temperature
             )
-            
+
             answer = response.choices[0].message.content
             logger.info("Successfully generated answer")
             return answer
-            
+
         except Exception as e:
             logger.error(f"Error generating answer: {str(e)}")
             raise
@@ -451,6 +459,39 @@ Please provide a comprehensive answer based on the context above."""
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}")
             raise
+
+    def query_chat(self, messages: List[Dict[str, str]], top_k: int = 5) -> Dict[str, Any]:
+        """Chat-style RAG query that keeps prior turns in context."""
+        if not messages:
+            raise ValueError("Chat messages cannot be empty")
+
+        # Use the latest user message as the search query
+        latest_user = next((m for m in reversed(messages) if m.get("role") == "user"), None)
+        if not latest_user:
+            raise ValueError("At least one user message is required")
+
+        question = latest_user.get("content", "").strip()
+        if not question:
+            raise ValueError("Latest user message is empty")
+
+        logger.info(f"Processing chat query: {question}")
+        context_chunks = self.search_similar(question, top_k=top_k)
+
+        if not context_chunks:
+            return {
+                "answer": "I couldn't find any relevant information in the documents to answer your question.",
+                "sources": [],
+                "context": []
+            }
+
+        answer = self.generate_answer(question, context_chunks, chat_history=messages)
+        sources = list(set([chunk["source"] for chunk in context_chunks]))
+
+        return {
+            "answer": answer,
+            "sources": sources,
+            "context": context_chunks
+        }
 
 
 def main():

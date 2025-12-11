@@ -216,10 +216,20 @@ async function queryQuestion(ev) {
   }
 
   try {
-    const r = await fetch(baseUrl() + '/query', {
+    const filteredHistory = chatHistory.filter(m => !(m.role === 'ai' && m.content === 'Thinking...'));
+
+    const payload = {
+      messages: filteredHistory.map(m => ({
+        role: m.role === 'ai' ? 'assistant' : 'user',
+        content: m.content
+      })),
+      top_k: topK
+    };
+
+    const r = await fetch(baseUrl() + '/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, top_k: topK })
+      body: JSON.stringify(payload)
     });
     const json = await r.json();
     // Remove loading bubble
