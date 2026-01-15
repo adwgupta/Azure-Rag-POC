@@ -409,8 +409,7 @@ Please provide a concise, source-grounded answer based on the context above."""
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}
                 ],
-                max_completion_tokens=self.max_tokens,
-                temperature=self.temperature
+                max_completion_tokens=self.max_tokens
             )
 
             answer = response.choices[0].message.content

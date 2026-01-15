@@ -36,12 +36,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS
+# Enable CORS - must be added FIRST before any routes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

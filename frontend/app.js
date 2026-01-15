@@ -218,13 +218,16 @@ async function queryQuestion(ev) {
   try {
     const filteredHistory = chatHistory.filter(m => !(m.role === 'ai' && m.content === 'Thinking...'));
 
-    const payload = {
+    const payload = { 
+      query: question, 
+      conversation_id: null };
+    /*const payload = {
       messages: filteredHistory.map(m => ({
         role: m.role === 'ai' ? 'assistant' : 'user',
         content: m.content
       })),
       top_k: topK
-    };
+    };*/
 
     const r = await fetch(baseUrl() + '/chat', {
       method: 'POST',
