@@ -1,12 +1,7 @@
-// Simple frontend JS to interact with the Azure RAG FastAPI server
-// Modern, commented frontend JS for Azure RAG demo
-// This script uses plain JavaScript to drive UI interactions and
-// to perform API calls (or show preview/mock responses).
-
 // Helper to get element by id
 function $id(id) { return document.getElementById(id); }
 
-// Return the configured API base URL (useful when not in preview)
+// Return the configured API base URL 
 function baseUrl() {
   return $id('apiBase').value.replace(/\/$/, '');
 }
@@ -17,7 +12,6 @@ if (!conversationId) {
   conversationId = 'user_' + Math.random().toString(36).substr(2, 9);
   localStorage.setItem('conversationId', conversationId);
 }
-
 
 // Preview mode toggle — when true we use mocked responses only
 function isPreview() {
@@ -146,7 +140,6 @@ async function ingestFile(fileOverride) {
   }
 }
 
-
 // --- Chat UI logic ---
 const chatHistory = [];
 
@@ -184,8 +177,6 @@ function renderBubbleAI(answer, sources, context) {
   return div;
 }
 
-
-// QUERY: ask the backend (or show a mocked preview answer) and update chat
 // Chat query
 async function queryQuestion(ev) {
   if (ev) ev.preventDefault();
@@ -239,7 +230,6 @@ async function queryQuestion(ev) {
     setDisabled([$id('queryBtn')], false);
   }
 }
-
 
 // Basic HTML-escape helper to avoid injection when rendering server text
 function escapeHtml(s) {
@@ -298,15 +288,13 @@ window.addEventListener('DOMContentLoaded', () => {
   $id('createIndexBtn').addEventListener('click', createIndex);
   $id('ingestBtn').addEventListener('click', () => ingestFile());
 
-  // Chat input form submit (Enter or button)
+  // Chat input form submit 
   const chatForm = document.getElementById('chatForm');
   if (chatForm) {
     chatForm.addEventListener('submit', queryQuestion);
   }
-
   // initialize drop zone behavior
   setupDropZone();
-
   // Initial render
   renderChat();
 });
