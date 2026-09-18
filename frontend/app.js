@@ -210,7 +210,7 @@ async function queryQuestion(ev) {
   }
 
   try {
-    // Use /chat and send conversation_id
+    // Use chat and send conversation_id
     const r = await fetch(baseUrl() + '/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -243,7 +243,7 @@ function escapeHtml(s) {
     .replace(/\n/g, '<br/>');
 }
 
-// DRAG & DROP UX: wire drop area to the hidden file input for nice UX
+// DRAG & DROP UX
 function setupDropZone() {
   const drop = $id('dropZone');
   const fileInput = $id('fileInput');
