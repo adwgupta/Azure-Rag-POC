@@ -41,8 +41,7 @@ def chat_endpoint(request: ChatRequest):
     if request.conversation_id:
         history = conversation_memory.get(request.conversation_id, [])
 
-    # Azure RAG query (stateless for now)
-    # If your backend supports passing history to OpenAI for context, add it here
+    # Azure RAG query
     answer, sources = rag_backend.query(request.query)
 
     # Save multi-turn history in memory
